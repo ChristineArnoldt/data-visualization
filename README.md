@@ -1,8 +1,6 @@
-# data-visualization
 Flight Data Analysis and Visualization for DSVS-2021-Eichin
 
-#Aufgabenstellung
-# Abschlussaufgabe
+# Aufgabenstellung
 Sie finden unter in der folgenden Tabelle verschiedene Datensets.
 
 | Name | Größe (Rows x Cols) | URL |
