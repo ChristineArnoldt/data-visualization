@@ -1,0 +1,7 @@
+Data/original-kaggle-flight-data/airlines.csv
+Data/original-kaggle-flight-data/airports.csv
+Data/original-kaggle-flight-data/flights.csv
+Data/cleaning/cleaned-data/flights_allFlights_NaN_onlyflights.csv
+Data/cleaning/cleaned-data/flights_nonCancelled_NaN-onlyflights.csv
+Data/cleaning/cleaned-data/flights_nonCancelled_withsomeNaN.csv
+Data/cleaning/cleaned-data/flights_nonCancelled-cleaned.csv
