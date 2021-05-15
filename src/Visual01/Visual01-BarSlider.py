@@ -5,10 +5,11 @@ Barchart that shows the airports with the highest average departure delays and w
 import pandas as pd
 import plotly.graph_objects as go
 
-#read dataframe with nonCancelled flights
+#read dataframe with nonCancelled flights (not like that's obvious)
 df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled-cleaned.csv', sep=',', usecols = {'Unnamed: 0', 'AIRLINE', 'DEPARTURE_DELAY','ARRIVAL_DELAY','ORIGIN_AIRPORT','ORIGIN_AIRPORT_NAME','DESTINATION_AIRPORT','DESTINATION_AIRPORT_NAME'})
 
 #new dataframes for all arriving and for all departing flights (grouped by airport) with a new column with average arrival or departure delay respectively, all other columns removed
+#could i have put all that in a function to make the code shorter? probably. did i want to? no. please forgive me - i know it's a little messy, but it does the job.
 ArrivingPerAirport = df.groupby(["DESTINATION_AIRPORT"]).nunique().reset_index()
 ArrivingPerAirport = ArrivingPerAirport.rename(columns={'Unnamed: 0':'flightcount'}).reset_index()
 ArrivingPerAirport.drop(columns={'index', 'AIRLINE', 'ORIGIN_AIRPORT','DEPARTURE_DELAY','ORIGIN_AIRPORT_NAME','DESTINATION_AIRPORT_NAME'}, inplace=True)
@@ -39,6 +40,18 @@ steps = []
 visibilitylist = [[]]
 #list with all false values in same length as the dataframe from the for-loop will be
 visibilityval = [False for n in range(len(relevantAirports.index))]
+
+
+# This is were it get's a litte complicated and tricky (i would know, it took me forever to actually fix the logic in this mess of a for-loop). please just bear with me, i promise it works
+# what i'm doing in short:
+#   1.  sorting relevantairports by the highest average departure delay (and as a secondary sort my the number of flights departing from the airport)
+#   2.  then i'm dropping all rows below the index value i in each iterration to create a new dataframe in each iterration
+#   3.  i add a new column to the newly created dataframe that basically tells you which iteration the dataframe belongs to (first iteration: the value in the column would be 'Top 1', second iteration: the value would be 'Top 2' ans so on)
+#   4.  now i'm appending the dataframe to a list
+#       i now have a list of dataframes - in the first dataframe is only one row with the airport with the highest delay. in the second one are two rows with the airports with the two highest delays and so on. in the last list entry is a dataframe with all airports
+#   5.  i create a boolean list which is appended to visibilitylist, which is later used to mark which trace is visible based on the position of the slider
+#   6.  i create a trace for each slider step using the list of dataframes
+#   7.  i create a dict for each slider step
 
 for i in range (1,len(relevantAirports.index)):
     # new dataframe where entries of relevantAirports are sorted by the average departure delay (highest first) (and if multiple rows have the same departure delay, by the number of flights departing from the airport)
@@ -73,6 +86,9 @@ for i in range (1,len(relevantAirports.index)):
     # creating the steps for the slider    
     step = dict(label = topDelayedGroup[i]['Top n'].iloc[0], method = "update",args = [{"visible": visibilitylist[i]}])
     steps.append(step)
+
+# wooo we finally got through this mess of a for loop（〜^∇^)〜 hope you didn't get lost along the way
+
 # creating the sliders
 sliders = [dict(
     # when the page is first loaded the slider is at the 'Top 10' position
