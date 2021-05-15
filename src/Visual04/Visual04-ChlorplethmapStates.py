@@ -5,9 +5,9 @@ US-Map where states are colored based on the average arrival delay of flights ar
 import pandas as pd
 import plotly.graph_objects as pgo
 
+#read shit
 df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled-cleaned.csv', usecols={'Unnamed: 0', 'ARRIVAL_DELAY','ORIGIN_AIRPORT','ORIGIN_AIRPORT_NAME', 'DESTINATION_AIRPORT_NAME', 'ORIGIN_STATE', 'DESTINATION_STATE', 'ORIGIN_AIRPORT_LAT', 'ORIGIN_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON'})
 usstates = pd.read_csv('https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv')
-
 
 #create csv with States and number of flights per state
 ArrivingPerState = df.groupby(['DESTINATION_STATE']).nunique().reset_index()

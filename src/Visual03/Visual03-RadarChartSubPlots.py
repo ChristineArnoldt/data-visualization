@@ -38,49 +38,40 @@ df['CANCELLED'] = np.where(df.CANCELLED == 0, NaN, 1)
 groupByAirline = df.groupby(['AIRLINE', 'AIRLINE_NAME']).nunique().reset_index()
 groupByAirline.drop(columns={'ELAPSED_TIME', 'DISTANCE', 'ARRIVAL_DELAY', 'CANCELLED', 'ORIGIN_AIRPORT', 'DESTINATION_AIRPORT'}, inplace=True)
 
-#get overall number of flights (cancelled and non-cancelled)
-series_flightcount = df.groupby('AIRLINE')['AIRLINE'].count()
-# series to dataframe, resetting index to get date as seperate column, renaming columns appropriately and then merging with the groupByAirline Dataframe to get a new column und groupByAirline with the flightcount
-scheduledflightcount = pd.DataFrame(series_flightcount)
-scheduledflightcount.rename(columns={'AIRLINE':'Count of Scheduled Flights'}, inplace=True)
-scheduledflightcount.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(scheduledflightcount, on='AIRLINE')
+#creating list with desired values (count or sum of values per airline)
+def creategroup (operation, groupby):
+    if operation == 'count':
+        if groupby == 'AIRLINE':
+            group = df.groupby('AIRLINE')[groupby].count()
+            return group
+        else:
+            group = df.groupby('AIRLINE')[groupby].count().sort_index()
+            return group
+    elif operation == 'sum':
+        group = df.groupby('AIRLINE')[groupby].sum()
+        return group
+    else:
+        print('Your using the wrong function. I only to sums and counts, sorry.')
 
-# get sum of elapsed time, distance and delay per airline
-series_elapsedtimesum = df.groupby('AIRLINE')['ELAPSED_TIME'].sum()
-series_distancesum = df.groupby('AIRLINE')['DISTANCE'].sum()
-series_delaysum = df.groupby('AIRLINE')['ARRIVAL_DELAY'].sum()
-# get count of delayed flights, origin airports and destination airports per airline
-series_cancelledcount = df.groupby('AIRLINE')['CANCELLED'].count().sort_index()
-series_originairportcount = df.groupby('AIRLINE')['ORIGIN_AIRPORT'].count().sort_index()
-series_destinationairportcount = df.groupby('AIRLINE')['DESTINATION_AIRPORT'].count().sort_index()
+#creating new dataframe with an additional column with count/sum of values per airline
+def createnewcolsumcount (operation, groupby, dataframegroupByAirline):
+    colasdf = pd.DataFrame(creategroup(operation, groupby))
+    if groupby == 'AIRLINE':
+        colasdf.rename(columns={'AIRLINE':'Count of Scheduled Flights'}, inplace = True)
+    
+    colasdf.reset_index(inplace=True)
+    dataframegroupByAirline = dataframegroupByAirline.merge(colasdf, on='AIRLINE')
+    return dataframegroupByAirline
 
-# series to dataframe, resetting index to get airline as seperate column and merging with groupByAirline to get new column for sum/count values
-airlineelapsed = pd.DataFrame(series_elapsedtimesum)
-airlineelapsed.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(airlineelapsed, on='AIRLINE')
+groupByAirline = createnewcolsumcount('count', 'AIRLINE', groupByAirline)
+groupByAirline = createnewcolsumcount('sum', 'ELAPSED_TIME', groupByAirline)
+groupByAirline = createnewcolsumcount('sum', 'DISTANCE', groupByAirline)
+groupByAirline = createnewcolsumcount('sum', 'ARRIVAL_DELAY', groupByAirline)
+groupByAirline = createnewcolsumcount('count', 'CANCELLED', groupByAirline)
+groupByAirline = createnewcolsumcount('count', 'ORIGIN_AIRPORT', groupByAirline)
+groupByAirline = createnewcolsumcount('count', 'DESTINATION_AIRPORT', groupByAirline)
 
-airlinedistance = pd.DataFrame(series_distancesum)
-airlinedistance.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(airlinedistance, on='AIRLINE')
-
-airlinedelay = pd.DataFrame(series_delaysum)
-airlinedelay.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(airlinedelay, on='AIRLINE')
-
-airlinecancelled = pd.DataFrame(series_cancelledcount)
-airlinecancelled.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(airlinecancelled, on='AIRLINE')
-
-airlineoriginairport = pd.DataFrame(series_originairportcount)
-airlineoriginairport.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(airlineoriginairport, on='AIRLINE')
-
-airlinedestinationairport = pd.DataFrame(series_destinationairportcount)
-airlinedestinationairport.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(airlinedestinationairport, on='AIRLINE')
-
-#creating percentage values of distance, elapsed time, delay, no. of cancelled flights and airports for airlines based on overall number
+#creating percentage values of distance, elapsed time, delay, no. of cancelled flights and airports for airlines based on overall sum/count (to have a uniform basis for the range, bc/ the ranges of the absolut values differ a lot between the different dimensions)
 percent_distance = groupByAirline['DISTANCE'] / groupByAirline.DISTANCE.sum() * 100
 percent_elapsedtime = groupByAirline['ELAPSED_TIME'] / groupByAirline.ELAPSED_TIME.sum() * 100
 percent_delay = groupByAirline['ARRIVAL_DELAY'] / groupByAirline.ARRIVAL_DELAY.sum() * 100
@@ -89,29 +80,18 @@ percent_originairport = groupByAirline['ORIGIN_AIRPORT'] / groupByAirline.ORIGIN
 percent_destinationairport = groupByAirline['DESTINATION_AIRPORT'] / groupByAirline.DESTINATION_AIRPORT.sum() * 100
 
 # series to dataframe, resetting index to get airline as seperate column and merging with groupByAirline to get new column for percentage values
-percent_distance = pd.DataFrame(percent_distance)
-percent_distance.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(percent_distance, left_index=True, right_index=True)
+def createnewcolpercentage (percentagelist, dataframegroupByAirline):
+    percentagedf = pd.DataFrame(percentagelist)
+    percentagedf.reset_index(inplace=True)
+    dataframegroupByAirline= dataframegroupByAirline.merge(percentagedf, left_index=True, right_index=True)
+    return dataframegroupByAirline
 
-percent_elapsedtime = pd.DataFrame(percent_elapsedtime)
-percent_elapsedtime.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(percent_elapsedtime, left_index=True, right_index=True)
-
-percent_delay = pd.DataFrame(percent_delay)
-percent_delay.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(percent_delay, left_index=True, right_index=True)
-
-percent_cancelled = pd.DataFrame(percent_cancelled)
-percent_cancelled.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(percent_cancelled, left_index=True, right_index=True)
-
-percent_originairport = pd.DataFrame(percent_originairport)
-percent_originairport.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(percent_originairport, left_index=True, right_index=True)
-
-percent_destinationairport = pd.DataFrame(percent_destinationairport)
-percent_destinationairport.reset_index(inplace=True)
-groupByAirline= groupByAirline.merge(percent_destinationairport, left_index=True, right_index=True)
+groupByAirline = createnewcolpercentage(percent_distance,groupByAirline)
+groupByAirline = createnewcolpercentage(percent_elapsedtime,groupByAirline)
+groupByAirline = createnewcolpercentage(percent_delay,groupByAirline)
+groupByAirline = createnewcolpercentage(percent_cancelled,groupByAirline)
+groupByAirline = createnewcolpercentage(percent_originairport,groupByAirline)
+groupByAirline = createnewcolpercentage(percent_destinationairport,groupByAirline)
 
 #dropping all redundant columns and renaming remainig columns appropriately
 groupByAirline.drop(columns={'index_x', 'index_y', 'index_x', 'index_y', 'index_x', 'index_y'}, inplace=True)
@@ -127,6 +107,10 @@ groupByAirline.rename(columns={'Share in Elapsed Time in Percent':'Elapsed %', '
 #get category-names from dataframe column names
 categories = groupByAirline.loc[:,'Elapsed %':'Destination Airport Count %'].columns
 colors = ['#FAAD89','#CABCE8','#75D55D','#ED9C87','#877099','#4BB386','#ACEBAB','#E36B6D','#7B1416','#736078','#F5C0B8','#79D494']
+'''
+i know that especially in the last radar chart with the 3 smallest airlines the different planes are still a little hard to distinguish but i really did my best to find colors that improve the ability to differentiate between the different planes.
+(please refer to the comment at the end of the script where the range for the radial axis is set for my reasoning)
+'''
 
 #creating subsets for each figure (and reordering subsets so the reorder the planes in the visualization to make them more distinguishable
 group_fig1 = groupByAirline.iloc[:3]
@@ -156,7 +140,11 @@ fig = make_subplots(
     specs=[[{"type": "polar"}, {"type": "polar"}],[{"type": "polar"}, {"type": "polar"}]]
 )
 
-#creating a trace for each subplot
+#creating a trace for each subplot - don't think i really have to explain this one...
+# r are the values for all the different dimensions that are shown in the plot,
+# theta are the names of these dimensions
+# name is the name of the airline,
+# the hovertemplate shows the numeric value of the share (r) for the category (theta), the airline name & how many flights the airline planned on flying
 for i in range (3):
     fig.add_trace(go.Scatterpolar(
         r=[group_fig1.loc[i, 'Elapsed %'], group_fig1.loc[i, 'Distance %'], group_fig1.loc[i, 'Delay Time %'], group_fig1.loc[i, 'Cancelled %'], group_fig1.loc[i, 'Origin Airport Count %'], group_fig1.loc[i, 'Destination Airport Count %']],
@@ -165,7 +153,7 @@ for i in range (3):
         fill='toself',
         line=dict(color=colors[i]),
         showlegend = True, 
-        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig1.AIRLINE_NAME[i])+'Flights Flown: {}'.format(group_fig1.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
+        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig1.AIRLINE_NAME[i])+'No. of Scheduled Flights: {}'.format(group_fig1.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
         row=1,
         col=1
     )
@@ -176,7 +164,7 @@ for i in range (3):
         fill='toself',
         line=dict(color=colors[i+3]),
         showlegend = True, 
-        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig2.AIRLINE_NAME[i])+'Flights Flown: {}'.format(group_fig2.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
+        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig2.AIRLINE_NAME[i])+'No. of Scheduled Flights: {}'.format(group_fig2.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
         row=1,
         col=2
     )
@@ -187,7 +175,7 @@ for i in range (3):
         fill='toself',
         line=dict(color=colors[i+6]),
         showlegend = True, 
-        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig3.AIRLINE_NAME[i])+'Flights Flown: {}'.format(group_fig3.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
+        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig3.AIRLINE_NAME[i])+'No. of Scheduled Flights: {}'.format(group_fig3.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
         row=2,
         col=1
     )
@@ -198,7 +186,7 @@ for i in range (3):
         fill='toself',
         line=dict(color=colors[i+9]),
         showlegend = True, 
-        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig4.AIRLINE_NAME[i])+'Flights Flown: {}'.format(group_fig4.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
+        hovertemplate='Share: %{r}<br>Dimension: %{theta}<br>'+'Airline: {}<br>'.format(group_fig4.AIRLINE_NAME[i])+'No. of Scheduled Flights: {}'.format(group_fig4.loc[i, 'Count of Scheduled Flights'])+'<extra></extra>',),
         row=2,
         col=2
     )
@@ -208,12 +196,11 @@ fig.update_layout(
         radialaxis=dict(
         visible=True,
         ticks = '',
-        range = [0,32],
         ),
         angularaxis=dict(ticks='')
     ),
     showlegend=True,
-    legend = dict(orientation='h', yanchor='top'),
+    legend = dict(orientation='h', yanchor='top'), #legend at the bottom bc/ otherwise the heading would not be centered and bc/ the i don't consider the legend to be of major importance, because the airline names are shown upon hover as well
     title_text = 'Airline Performance Comparison',
     title_y = 0.985,
     title_x = 0.5,
@@ -238,6 +225,11 @@ fig.update_layout(
 
 #setting ranges for each plot
 #the two plots for the biggest airlines have the same range and the two plots for the smallest airlines have the same range to imporve comparability without making the plots undecipherable because the range is too big for the smaller airlines
+'''
+i know that especially in the last radar chart with the 3 smallest airlines the different planes are still a little hard to distinguish, but this is kind of a trade-of for me -
+i din't want a different range for the radar chart axis for each chart in an attempt to not skew perception of the performance differences when comparing airlines
+(now i have one range for the 6 biggest airlines and one for the 6 smallest so at least these two could be easily compared and because it's impossible to use the same range for all charts without making them impossible to read)
+'''
 fig.update_polars(
     radialaxis=dict(range = [0,32]),
     row = 1,

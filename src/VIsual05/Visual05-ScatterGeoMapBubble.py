@@ -58,7 +58,7 @@ figlimits.show()
 #limits determined by estimating sigma values (standard deviation) using the histogram
 limits = [(-20, -5.01),(-5,10), (10.01,25), (25.01,60)]
 
-colors = ['#16d446','#95a600','#c16d00','#cc1e1e']
+colors = ['#16d446','#95a600','#c16d00','#cc1e1e'] # bright green: avg.delay -20 to -5 minutes (flights were early), dull green: avg. delay -5 to 10 minutes (a little early to reasonably delayed), orange: avg. delay 10 to 25 min (delayed), red: avg. delay 25-60 min (reaaaally late)
 scale = 1500
 
 fig = go.Figure()
@@ -81,7 +81,9 @@ for i in range(len(limits)):
         showlegend = False
     ))
 
-    #bubble map trace
+    #bubble map traces - destination airports.
+    #multiple traces based on limits (grouping arrival delays)
+    # hovertext shows airport name, no. of flights and the average arrival delay, marker size based on flightcount, color based on arrival delays,
     fig.add_trace(go.Scattergeo(
         locationmode = 'USA-states',
         lon = df_sub['DESTINATION_AIRPORT_LON'],
@@ -99,6 +101,7 @@ for i in range(len(limits)):
         name = '{0} - {1}'.format(lim[0],lim[1])
     ))
 
+#i don't know what u want me to say... everything here is kind of obvious - setting the title, labeling the legend, setting the map scope and the color
 fig.update_layout(
         title_text = 'Number Of Long Distance Flights and Average Arrival Delay of American Airports in 2015<br>(Click legend to toggle traces)',
         showlegend = True,
