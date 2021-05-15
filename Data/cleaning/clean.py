@@ -33,8 +33,7 @@ def run():
     print(df.shape)
     
     '''
-    if you're reading this.. wow. you really take this serious huh?
-    if i were you i probably wouldn't have looked at the cleaning file (at least not properly). but i respect the effort 
+    if you're reading this.. wow. surprised you're actually checking out my data cleaning, but i respect the effort 
         ∧__∧
       （｀•ω• )づ__∧
       （つ　 /( •ω•。)
