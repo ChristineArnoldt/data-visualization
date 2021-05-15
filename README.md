@@ -1,4 +1,8 @@
-Flight Data Analysis and Visualization for DSVS-2021-Eichin
+Flight Data Analysis and Visualization for DSVS-2021
+
+# Note
+Please note that the original datasets used in this project (which can be found here: https://www.kaggle.com/usdot/flight-delays) are not part of this repository. They need to be downloaded and saved in 'Data/original-kaggle-flight-data'. Then the 'clean.py' in 'Data/cleaning' can be run to create the sub-datasets that are used in this project.
+
 
 # Aufgabenstellung
 Sie finden unter in der folgenden Tabelle verschiedene Datensets.
