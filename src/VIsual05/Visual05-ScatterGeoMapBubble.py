@@ -8,7 +8,9 @@ import pandas as pd
 import plotly.express as px
 
 #read file
-df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled_withsomeNaN.csv', usecols={'Unnamed: 0','ORIGIN_AIRPORT', 'ORIGIN_AIRPORT_NAME', 'DESTINATION_AIRPORT', 'DESTINATION_AIRPORT_NAME', 'ORIGIN_AIRPORT_LON', 'ORIGIN_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'ARRIVAL_DELAY'})
+df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled-onlyflights-withairports.csv', usecols={'Unnamed: 0','ORIGIN_AIRPORT', 'ORIGIN_AIRPORT_NAME', 'DESTINATION_AIRPORT', 'DESTINATION_AIRPORT_NAME', 'ORIGIN_AIRPORT_LON', 'ORIGIN_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'ARRIVAL_DELAY'})
+allairports = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled_withallNaNs.csv', usecols={'Unnamed: 0','ORIGIN_AIRPORT', 'ORIGIN_AIRPORT_NAME', 'DESTINATION_AIRPORT', 'DESTINATION_AIRPORT_NAME', 'ORIGIN_AIRPORT_LON', 'ORIGIN_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'ARRIVAL_DELAY'})
+
 print(df.head())
 
 #removing rows without an origin airport (and by doing so also removing rows without a destination airport)
@@ -28,13 +30,21 @@ ArrivingFlightsPerAirport.rename(columns={'ARRIVAL_DELAY':'Average Delay'}, inpl
 destination_data = df.groupby(['DESTINATION_AIRPORT'], as_index=False).agg({'DESTINATION_AIRPORT_NAME': 'first', 'DESTINATION_AIRPORT_LAT':'first', 'DESTINATION_AIRPORT_LON':'first'})
 ArrivingFlightsPerAirport = ArrivingFlightsPerAirport.merge(destination_data, on='DESTINATION_AIRPORT')
 
-#dataframe with all origin airports
-OriginAirports = df.groupby(['ORIGIN_AIRPORT']).nunique().reset_index()
-OriginAirports.drop(columns={'Unnamed: 0','DESTINATION_AIRPORT', 'ORIGIN_AIRPORT_NAME','DESTINATION_AIRPORT_NAME', 'ORIGIN_AIRPORT_LON', 'ORIGIN_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'ARRIVAL_DELAY'},inplace=True),
-origin_data = df.groupby(['ORIGIN_AIRPORT'], as_index=False).agg({'ORIGIN_AIRPORT_NAME': 'first', 'ORIGIN_AIRPORT_LAT':'first', 'ORIGIN_AIRPORT_LON':'first'})
-OriginAirports = OriginAirports.merge(origin_data, on='ORIGIN_AIRPORT')
+
+addAirportsOrigin = allairports.groupby(['ORIGIN_AIRPORT']).nunique().reset_index()
+addAirportsOrigin.drop(columns={'Unnamed: 0','DESTINATION_AIRPORT', 'ORIGIN_AIRPORT_NAME','DESTINATION_AIRPORT_NAME', 'ORIGIN_AIRPORT_LON', 'ORIGIN_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'ARRIVAL_DELAY'},inplace=True),
+addOrigin_data = allairports.groupby(['ORIGIN_AIRPORT'], as_index=False).agg({'ORIGIN_AIRPORT_NAME': 'first', 'ORIGIN_AIRPORT_LAT':'first', 'ORIGIN_AIRPORT_LON':'first'})
+addAirportsOrigin = addAirportsOrigin.merge(addOrigin_data, on='ORIGIN_AIRPORT')
 #getting only airports that are not already in the ArrivingFlightsPerAirport dataframe as a destination
-OriginAirports = OriginAirports[~OriginAirports.ORIGIN_AIRPORT.isin(ArrivingFlightsPerAirport.DESTINATION_AIRPORT)]
+addAirportsOrigin = addAirportsOrigin[~addAirportsOrigin.ORIGIN_AIRPORT.isin(ArrivingFlightsPerAirport.DESTINATION_AIRPORT)]
+
+addAirportsDestination = allairports.groupby(['DESTINATION_AIRPORT']).nunique().reset_index()
+addAirportsDestination.drop(columns={'Unnamed: 0','ORIGIN_AIRPORT', 'ORIGIN_AIRPORT_NAME','DESTINATION_AIRPORT_NAME', 'ORIGIN_AIRPORT_LON', 'ORIGIN_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'ARRIVAL_DELAY'},inplace=True),
+addDestination_data = allairports.groupby(['DESTINATION_AIRPORT'], as_index=False).agg({'DESTINATION_AIRPORT_NAME': 'first', 'DESTINATION_AIRPORT_LAT':'first', 'DESTINATION_AIRPORT_LON':'first'})
+addAirportsDestination = addAirportsDestination.merge(addDestination_data, on='DESTINATION_AIRPORT')
+#getting only airports that are not already in the ArrivingFlightsPerAirport dataframe as a destination
+addAirportsDestination = addAirportsDestination[~addAirportsDestination.DESTINATION_AIRPORT.isin(ArrivingFlightsPerAirport.DESTINATION_AIRPORT)]
+
 
 #printing min, max and mean of flightcount to help determine which method to use to normalize values
 print('MIN:'+str(ArrivingFlightsPerAirport['flightcount'].min()))
@@ -47,14 +57,18 @@ ArrivingFlightsPerAirport['scaled flightcount'] = normalized_flightcount
 
 #determining limits for sub-traces (grouping airports by flightcount reasonably)
 
+'''
+#testing same division in both directions (except that the positive one has more steps) with step ranges increasing in size moving from zero (using geometric series as general concept and only merging the steps closest to 0 into one)
+limits = [(-20,-10), (-10,-5), (-5, -2.5), (-2.5, -1.25), (-1.25, 0), (0,1.25), (1.25, 2.5), (2.5,5), (5,10), (10,20), (20,40), (40,80)]
 #tried using fibonacci sequence for scaling - didn't work out well (too many groups, some groups with very few airports):
-#limits = [(-20,-10), (-10,-5), (-5, -2.5), (-2.5, -1.25), (-1.25, 0), (0,1.25), (1.25, 2.5), (2.5,5), (5,10), (10,20), (20,40), (40,80)]#[(-20, -12.01),(-12, -7.01),(-7, -4.01),(-4, -2.01),(-2, -1.01),(-1,-0.01) ,(0,1), (1.01, 2), (2.01, 4), (4.01, 7), (7.01, 12), (12.01, 20), (20.01, 33), (33.01, 54), (54.01, 88) ]#(-20, 0),(0.01,20),(20.01,40),(40.01,60)]
-
+limits = [(-20, -12.01),(-12, -7.01),(-7, -4.01),(-4, -2.01),(-2, -1.01),(-1,-0.01) ,(0,1), (1.01, 2), (2.01, 4), (4.01, 7), (7.01, 12), (12.01, 20), (20.01, 33), (33.01, 54), (54.01, 88) ]#(-20, 0),(0.01,20),(20.01,40),(40.01,60)]
+'''
 '''
 #histogram to estimate sigma values for determining appropriate limits
-figlimits = px.histogram(group_df, x="Average Delay", hover_data=group_df.columns)
+figlimits = px.histogram(ArrivingFlightsPerAirport, x="Average Delay", hover_data=ArrivingFlightsPerAirport.columns)
 figlimits.show()
 '''
+
 #limits determined by estimating sigma values (standard deviation) using the histogram
 limits = [(-20, -5.01),(-5,10), (10.01,25), (25.01,60)]
 
@@ -69,18 +83,6 @@ for i in range(len(limits)):
     #creating sub groups based on flightcount
     df_sub = ArrivingFlightsPerAirport.loc[(ArrivingFlightsPerAirport['Average Delay'] >= lim[0]) & (ArrivingFlightsPerAirport['Average Delay'] <= lim[1])]
     
-    #creating map
-    #trace with origin airports that are not in destination airports already
-    fig.add_trace(go.Scattergeo(
-        locationmode = 'USA-states',
-        lon = OriginAirports['ORIGIN_AIRPORT_LON'],
-        lat = OriginAirports['ORIGIN_AIRPORT_LAT'],
-        marker = dict(size = 3,color='grey'),
-        text = OriginAirports['ORIGIN_AIRPORT_NAME']+'<br>No. of Arriving Flights: 0',
-        hovertemplate = '%{text}<extra></extra>',
-        showlegend = False
-    ))
-
     #bubble map traces - destination airports.
     #multiple traces based on limits (grouping arrival delays)
     # hovertext shows airport name, no. of flights and the average arrival delay, marker size based on flightcount, color based on arrival delays,
@@ -98,14 +100,40 @@ for i in range(len(limits)):
             line_width=0.5,
             sizemode = 'area'
         ),
-        name = '{0} - {1}'.format(lim[0],lim[1])
+        name = '{0} - {1}'.format(lim[0],lim[1])+' minutes delayed.'
     ))
+
+
+#trace with origin airports that are not in destination airports already (without flightcount)
+fig.add_trace(go.Scattergeo(
+    locationmode = 'USA-states',
+    lon = addAirportsOrigin['ORIGIN_AIRPORT_LON'],
+    lat = addAirportsOrigin['ORIGIN_AIRPORT_LAT'],
+    legendgroup = 'Airports with no Arriving Flights',
+    name = 'Airports with no Arriving Flights',
+    marker = dict(size = 3,color='grey'),
+    text = addAirportsOrigin['ORIGIN_AIRPORT_NAME']+'<br>No. of Arriving Flights: 0',
+    hovertemplate = '%{text}<extra></extra>',
+    #showlegend = False
+))
+#trace with destination airports that are not in destination airports already (without flightcount)
+fig.add_trace(go.Scattergeo(
+    locationmode = 'USA-states',
+    lon = addAirportsDestination['DESTINATION_AIRPORT_LON'],
+    lat = addAirportsDestination['DESTINATION_AIRPORT_LAT'],
+    legendgroup = 'Airports with no Arriving Flights',
+    marker = dict(size = 3,color='grey'),
+    text = addAirportsDestination['DESTINATION_AIRPORT_NAME']+'<br>No. of Arriving Flights: 0',
+    hovertemplate = '%{text}<extra></extra>',
+    showlegend = False
+))
+
 
 #i don't know what u want me to say... everything here is kind of obvious - setting the title, labeling the legend, setting the map scope and the color
 fig.update_layout(
         title_text = 'Number Of Long Distance Flights and Average Arrival Delay of American Airports in 2015<br>(Click legend to toggle traces)',
         showlegend = True,
-        legend_title_text = 'Average Arrival Delay in Minutes',
+        legend_title_text = 'Average Arrival Delay in Minutes<br>Negative delays show by how many minutes flights were early.',
         geo = dict(
             scope = 'usa',
             landcolor = 'rgb(217, 217, 217)',

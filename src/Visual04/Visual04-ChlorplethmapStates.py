@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as pgo
 
 #read shit
-df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled-cleaned.csv', usecols={'Unnamed: 0', 'ARRIVAL_DELAY','ORIGIN_AIRPORT','ORIGIN_AIRPORT_NAME', 'DESTINATION_AIRPORT_NAME', 'ORIGIN_STATE', 'DESTINATION_STATE', 'ORIGIN_AIRPORT_LAT', 'ORIGIN_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON'})
+df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled-onlyflights-withairports.csv', usecols={'Unnamed: 0', 'ARRIVAL_DELAY','ORIGIN_AIRPORT','ORIGIN_AIRPORT_NAME', 'DESTINATION_AIRPORT_NAME', 'ORIGIN_STATE', 'DESTINATION_STATE', 'ORIGIN_AIRPORT_LAT', 'ORIGIN_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON'})
 usstates = pd.read_csv('https://raw.githubusercontent.com/jasonong/List-of-US-States/master/states.csv')
 
 #create csv with States and number of flights per state
@@ -35,8 +35,8 @@ fig.add_trace(pgo.Choropleth(
     z=ArrivingPerState['ArrivalDelayAvg'],
     colorscale="OrRd",
     #setting the hovertext to show the full state name
-    text = ArrivingPerState['State_Name'],
-    hovertemplate='In %{text} long distance flights landed with an average delay of %{z} minutes.<br><extra></extra>',
+    text = ArrivingPerState['State_Name']+' long distance flights landed with an average delay of ' + round(ArrivingPerState['ArrivalDelayAvg'],2).astype(str) +' minutes.<br>'+'The overall delay in '+ArrivingPerState['State_Name']+ ' amounts to '+ ArrivingPerState['ArrivalDelay'].astype(int).astype(str)+' minutes.',
+    hovertemplate='%{text}<extra></extra>',
     
 ))
 fig.update_layout(

@@ -10,7 +10,13 @@ import numpy as np
 import plotly.graph_objects as go
 
 #read csv with desired columns
-df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled_NaN-onlyflights.csv', sep=',', usecols={'Unnamed: 0', 'YEAR', 'MONTH', 'DAY','AIRLINE','ELAPSED_TIME', 'DISTANCE','ARRIVAL_DELAY'})
+df = pd.read_csv('Data/cleaning/cleaned-data/flights_nonCancelled-onlyflights-somemissingairports.csv', sep=',', usecols={'Unnamed: 0', 'YEAR', 'MONTH', 'DAY','AIRLINE','DISTANCE','ARRIVAL_DELAY'})
+
+
+# testing if there are any rowsrows with NaN values left
+# all values are in arrival delay - because the focus of this chart is the number of flights, i won't drop these rows, they just won't count into the 'delayed' count
+testForNaNrows = df[df.isna().any(axis=1)]
+print(testForNaNrows)
 
 # creating a date column that merges year, month and day into a single date
 df['DATE'] = pd.to_datetime({'year': df['YEAR'], 'month': df['MONTH'], 'day': df['DAY']})
