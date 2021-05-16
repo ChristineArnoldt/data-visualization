@@ -1,3 +1,4 @@
+from numpy.core.numeric import NaN
 import pandas as pd
 import numpy as np
 
@@ -46,11 +47,11 @@ def run():
     airportflights = airportflights.rename(columns={'IATA_CODE':'ORIGIN_AIRPORT','AIRPORT':'ORIGIN_AIRPORT_NAME', 'CITY':'ORIGIN_CITY', 'STATE':'ORIGIN_STATE', 'LATITUDE':'ORIGIN_AIRPORT_LAT', 'LONGITUDE':'ORIGIN_AIRPORT_LON'}).copy()
     airportflights = airportflights.merge(airports, left_on='DESTINATION_AIRPORT', right_on='IATA_CODE', how='outer').drop(columns=['DESTINATION_AIRPORT']).copy()
     airportflights = airportflights.rename(columns={'IATA_CODE':'DESTINATION_AIRPORT','AIRPORT':'DESTINATION_AIRPORT_NAME', 'CITY':'DESTINATION_CITY', 'STATE':'DESTINATION_STATE', 'LATITUDE':'DESTINATION_AIRPORT_LAT', 'LONGITUDE':'DESTINATION_AIRPORT_LON'}).copy()
-
+    print('Airportflights: ', airportflights.shape)
     #new dataframes with cancelled flights & without cancelled flights (just i have to filter out less when creating visualizations that only use one of them)
     print('separating cancelled and non-cancelled flights')
-    cancelled = airportflights[airportflights['CANCELLED'] != 0]
-    nonCancelled = airportflights[airportflights['CANCELLED'] == 0]
+    cancelled = airportflights[airportflights['CANCELLED'] == 1]
+    nonCancelled = airportflights[airportflights['CANCELLED'] != 1] #also includes rows with airports only
     print('Cancelled:',cancelled.shape)
     print('nonCancelled:',nonCancelled.shape)
 
@@ -69,27 +70,38 @@ def run():
     '''
     
     print('cleaning cancelled...')
-    cancelled_withallairports_NaN = cancelled.dropna(subset=['YEAR', 'MONTH', 'DAY', 'DAY_OF_WEEK', 'FLIGHT_NUMBER', 'SCHEDULED_DEPARTURE_LOCALTIME', 'SCHEDULED_TIME', 'DISTANCE', 'SCHEDULED_ARRIVAL_LOCALTIME', 'CANCELLED', 'CANCELLATION_REASON', 'SCHEDULED_ARRIVAL_ORIGINTIME'])
-    cancelled_onlyflights = cancelled.dropna(subset=['DESTINATION_AIRPORT', 'ORIGIN_AIRPORT'])
-    cancelled = cancelled_withallairports_NaN.dropna(subset=['AIRLINE','ORIGIN_AIRPORT', 'DESTINATION_AIRPORT', 'ORIGIN_AIRPORT_NAME', 'ORIGIN_STATE', 'DESTINATION_AIRPORT_NAME', 'DESTINATION_STATE', 'ORIGIN_AIRPORT_LAT', 'ORIGIN_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON'])
+    cancelled_onlyflights = cancelled.dropna(subset=['YEAR', 'MONTH', 'DAY'])
 
-    print('cleaning nonCancelled...')
-    nonCancelled_withallairports_NaN = nonCancelled.dropna(subset=['YEAR', 'MONTH', 'DAY', 'DAY_OF_WEEK','FLIGHT_NUMBER','SCHEDULED_DEPARTURE_LOCALTIME', 'SCHEDULED_TIME','ELAPSED_TIME', 'DISTANCE', 'SCHEDULED_ARRIVAL_LOCALTIME', 'CANCELLED'])
-    nonCancelled_onlyflights = nonCancelled.dropna(subset=['DESTINATION_AIRPORT', 'ORIGIN_AIRPORT'])
-    nonCancelled = nonCancelled_withallairports_NaN.dropna(subset=['AIRLINE', 'ORIGIN_AIRPORT', 'DESTINATION_AIRPORT','ORIGIN_AIRPORT_NAME', 'ORIGIN_STATE', 'DESTINATION_AIRPORT_NAME','DESTINATION_STATE', 'ORIGIN_AIRPORT_LAT', 'ORIGIN_AIRPORT_LON', 'DESTINATION_AIRPORT_LAT', 'DESTINATION_AIRPORT_LON'])
+    cancelled_onlyflights_withairports = cancelled_onlyflights.dropna(subset=['ORIGIN_AIRPORT', 'DESTINATION_AIRPORT'])
+
+    #checking which columns contain nan
+    null_columns=cancelled_onlyflights_withairports.columns[cancelled_onlyflights_withairports.isnull().any()]
+    print(cancelled_onlyflights_withairports[null_columns].isnull().sum())
+
+    print('Cancelled cancelled_onlyflights: ',cancelled_onlyflights.shape)
+    print('Cancelled cancelled_onlyflightswithairports: ',cancelled_onlyflights_withairports.shape)
     
+    print('cleaning nonCancelled...')
+    nonCancelled_onlyflights = nonCancelled.dropna(subset=['YEAR','MONTH', 'DAY'])
+    nonCancelled_onlyflights_withairports = nonCancelled_onlyflights.dropna(subset=['ORIGIN_AIRPORT', 'DESTINATION_AIRPORT', 'ELAPSED_TIME'])
+
+    print('non-Cancelled cancelled_onlyflights: ',nonCancelled_onlyflights.shape)
+    print('non-Cancelled cancelled_onlyflightswithairports: ',nonCancelled_onlyflights_withairports.shape)
+
+    #checking which columns contain nan
+    null_columns=nonCancelled_onlyflights_withairports.columns[nonCancelled_onlyflights_withairports.isnull().any()]
+    print(nonCancelled_onlyflights_withairports[null_columns].isnull().sum())
+
     print('concat dataframes')
-    allFlights = pd.concat([nonCancelled, cancelled])
+    allFlights_withairports = pd.concat([cancelled_onlyflights_withairports, cancelled_onlyflights_withairports])
     allFlights_onlyflights = pd.concat([nonCancelled_onlyflights, cancelled_onlyflights])
-    allFlights_withallairportsNaN = pd.concat([nonCancelled_withallairports_NaN, cancelled_withallairports_NaN])
+    allFlights_withallairportsNaN = pd.concat([nonCancelled, cancelled])
 
     #save cleaned csv
     print('saving...')
-    nonCancelled_onlyflights.to_csv('Data/cleaning/cleaned-data/flights_nonCancelled_NaN-onlyflights.csv', sep=',') #used in visual02 (heatmap - flightcount per day)
-    nonCancelled.to_csv('Data/cleaning/cleaned-data/flights_nonCancelled-cleaned.csv', sep=',') #used in visual01 (Barchart w/ slider) and visual04 (chlorplethmap - states w/ highest arrival delay)
-    nonCancelled_withallairports_NaN.to_csv('Data/cleaning/cleaned-data/flights_nonCancelled_withsomeNaN.csv', sep=',') #used in visual 05 (BubbleMap)
-    allFlights_onlyflights.to_csv('Data/cleaning/cleaned-data/flights_allFlights_NaN_onlyflights.csv', sep=',') #used in visual03 (radarchart - airline performance)
-    #allFlights_withallairportsNaN.to_csv('Data/cleaning/cleaned-data/flights_allFlights_NaN-cleaned.csv', sep=',') 
-    #allFlights.to_csv('Data/cleaning/cleaned-data/flights_allFlights-cleaned.csv', sep=',')
- 
+    nonCancelled_onlyflights_withairports.to_csv('Data/cleaning/cleaned-data/flights_nonCancelled-onlyflights-withairports.csv', sep=',') ##used in visual01 (Barchart w/ slider), used in visual04 (chlorplethmap - states w/ highest arrival delay), used in visual 05 (BubbleMap)
+    nonCancelled_onlyflights.to_csv('Data/cleaning/cleaned-data/flights_nonCancelled-onlyflights-somemissingairports.csv', sep=',') #used in visual02 (heatmap - flightcount per day)
+    allFlights_onlyflights.to_csv('Data/cleaning/cleaned-data/flights_allFlights_onlyflights-somemissingairports.csv', sep=',') #used in visual03 (radarchart - airline performance)
+    nonCancelled.to_csv('Data/cleaning/cleaned-data/flights_nonCancelled_withallNaNs.csv', sep=',') #used in visual 05 (BubbleMap),
+
 run()

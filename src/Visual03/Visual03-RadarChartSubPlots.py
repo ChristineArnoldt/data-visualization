@@ -10,24 +10,30 @@ import numpy as np
 from plotly.subplots import make_subplots
 
 # read files & merging to get name of airline
-df = pd.read_csv('Data/cleaning/cleaned-data/flights_allFlights_NaN_onlyflights.csv', sep=',', usecols=['AIRLINE','ELAPSED_TIME', 'DISTANCE','ARRIVAL_DELAY', 'CANCELLED','ORIGIN_AIRPORT', 'DESTINATION_AIRPORT'])
+df = pd.read_csv('Data/cleaning/cleaned-data/flights_allFlights_onlyflights-somemissingairports.csv', sep=',', usecols=['AIRLINE','ELAPSED_TIME', 'DISTANCE','ARRIVAL_DELAY', 'CANCELLED','ORIGIN_AIRPORT', 'DESTINATION_AIRPORT'])
 
 airline = pd.read_csv('Data/original-kaggle-flight-data/airlines.csv', sep=',')
 df = df.merge(airline, left_on='AIRLINE', right_on='IATA_CODE', how='left').rename(columns={'AIRLINE_x':'AIRLINE','AIRLINE_y':'AIRLINE_NAME'}).copy()
 df.drop(columns={'IATA_CODE'}, inplace=True)
 
-#replace NaN with 0 in all columns
-df.fillna(0, inplace=True)
+#removing rows with NaN values where flights were not cancelled
+for index, row in df.iterrows():
+    if row['ELAPSED_TIME'] == NaN and row['CANCELLED'] == 0:
+        df.drop(index, inplace=True)
 
-# setting elapsed time, distance, delay and airports of all cancelled flights to 0 -> airline didn't fly so they're not counted
-def setcancelledzero(col):
-    df.loc[df.CANCELLED != 0, col] = 0
+#testing if there are any rows non-Cancelled flights with NaN values left
+testForNaNrows = df[df.isna().any(axis=1) & df['CANCELLED']==1]
+print(testForNaNrows)
 
-setcancelledzero('ELAPSED_TIME')
-setcancelledzero('DISTANCE')
-setcancelledzero('ARRIVAL_DELAY')
-setcancelledzero('ORIGIN_AIRPORT')
-setcancelledzero('DESTINATION_AIRPORT')
+# setting elapsed time, distance, delay and airports of all cancelled flights to NaN -> airline didn't fly so they're not counted
+def setcancellednan(col):
+    df.loc[df.CANCELLED != 0, col] = NaN
+
+setcancellednan('ELAPSED_TIME')
+setcancellednan('DISTANCE')
+setcancellednan('ARRIVAL_DELAY')
+setcancellednan('ORIGIN_AIRPORT')
+setcancellednan('DESTINATION_AIRPORT')
 
 # setting delay of all flights that were faster than anticipated (negative delay) to 0 for better comparability
 # setting cancelled column to NaN if flight has was not cancelled (for value_count)
@@ -64,7 +70,7 @@ def createnewcolsumcount (operation, groupby, dataframegroupByAirline):
     return dataframegroupByAirline
 
 groupByAirline = createnewcolsumcount('count', 'AIRLINE', groupByAirline)
-groupByAirline = createnewcolsumcount('sum', 'ELAPSED_TIME', groupByAirline)
+groupByAirline = createnewcolsumcount('count', 'ELAPSED_TIME', groupByAirline)
 groupByAirline = createnewcolsumcount('sum', 'DISTANCE', groupByAirline)
 groupByAirline = createnewcolsumcount('sum', 'ARRIVAL_DELAY', groupByAirline)
 groupByAirline = createnewcolsumcount('count', 'CANCELLED', groupByAirline)
@@ -114,9 +120,6 @@ i know that especially in the last radar chart with the 3 smallest airlines the 
 
 #creating subsets for each figure (and reordering subsets so the reorder the planes in the visualization to make them more distinguishable
 group_fig1 = groupByAirline.iloc[:3]
-group_fig1 = group_fig1.reindex([0,2,1])
-group_fig1 = group_fig1.reset_index()
-group_fig1.drop(columns={'level_0'}, inplace=True)
 
 group_fig2 = groupByAirline.iloc[3:6]
 group_fig2 = group_fig2.reindex([3,5,4])
